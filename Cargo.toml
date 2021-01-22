@@ -1,0 +1,20 @@
+[package]
+name = "graphql-demo"
+version = "0.1.0"
+authors = ["Matt Wilkinson <mattwilki17@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+actix-web = "3.3.2"
+diesel = "1.4.5"
+dotenv = "0.15.0"
+env_logger = "0.8.2"
+futures = "0.3.12"
+juniper = "0.15.2"
+juniper_actix = "0.2.2"
+serde = "1.0.120"
+serde_derive = "1.0.120"
+serde_json = "1.0.61"
+actix-cors = "0.5.4"
