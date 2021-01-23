@@ -111,7 +111,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(middleware::Logger::default())
             .wrap(
                 Cors::default()
-                    .allowed_origin("http://127.0.0.1:8080")
+                    .allowed_origin("http://localhost:4000")
                     .allowed_methods(vec!["POST", "GET"])
                     .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT])
                     .allowed_header(header::CONTENT_TYPE)
@@ -123,10 +123,29 @@ async fn main() -> std::io::Result<()> {
                     .route(web::post().to(graphql_route))
                     .route(web::get().to(graphql_route)),
             )
-            .service(web::resource("/playground").route(web::get().to(playground_route)))
+            .service(web::resource("/graphql").route(web::get().to(playground_route)))
             .service(web::resource("/graphiql").route(web::get().to(graphiql_route)))
     });
     server.bind("localhost:4000").unwrap().run().await
 }
 // now go to http://127.0.0.1:8080/playground or graphiql and execute
 //{  apiVersion,  user(id: 2){id, name}}
+
+// use actix_web::{web, App, HttpRequest, HttpServer, Responder};
+
+// async fn greet(req: HttpRequest) -> impl Responder {
+//     let name = req.match_info().get("name").unwrap_or("World");
+//     format!("Hello {}!", &name)
+// }
+
+// #[actix_web::main]
+// async fn main() -> std::io::Result<()> {
+//     HttpServer::new(|| {
+//         App::new()
+//             .route("/", web::get().to(greet))
+//             .route("/{name}", web::get().to(greet))
+//     })
+//     .bind(("localhost", 4000))?
+//     .run()
+//     .await
+// }
