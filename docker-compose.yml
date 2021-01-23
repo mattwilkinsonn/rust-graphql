@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_DB=rust-graphql
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=pgadmin4@pgadmin.org
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    volumes:
+      - ./data/pgadmin:/root/.pgadmin
+    ports:
+      - "8000:80"
