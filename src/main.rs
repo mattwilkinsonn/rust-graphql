@@ -1,112 +1,41 @@
 #![deny(warnings)]
 
-use std::{collections::HashMap, env};
+use std::env;
 
 use actix_cors::Cors;
-use actix_web::{http::header, middleware, web, App, Error, HttpResponse, HttpServer};
-use juniper::{graphql_object, EmptyMutation, EmptySubscription, GraphQLObject, RootNode};
-use juniper_actix::{graphiql_handler, graphql_handler, playground_handler};
-#[derive(Clone, GraphQLObject)]
-///a user
-pub struct User {
-    ///the id
-    id: i32,
-    ///the name
-    name: String,
+use actix_web::{guard, http::header, middleware, web, App, HttpResponse, HttpServer};
+use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
+use async_graphql_actix_web::{Request, Response};
+use dotenv::dotenv;
+use gql::schema::{create_schema, GQLSchema};
+mod db;
+mod gql;
+
+async fn graphql_endpoint(schema: web::Data<GQLSchema>, req: Request) -> Response {
+    schema.execute(req.into_inner()).await.into()
 }
 
-#[derive(Default, Clone)]
-pub struct Database {
-    ///this could be a database connection
-    users: HashMap<i32, User>,
-}
-impl Database {
-    pub fn new() -> Database {
-        let mut users = HashMap::new();
-        users.insert(
-            1,
-            User {
-                id: 1,
-                name: "Aron".to_string(),
-            },
-        );
-        users.insert(
-            2,
-            User {
-                id: 2,
-                name: "Bea".to_string(),
-            },
-        );
-        users.insert(
-            3,
-            User {
-                id: 3,
-                name: "Carl".to_string(),
-            },
-        );
-        users.insert(
-            4,
-            User {
-                id: 4,
-                name: "Dora".to_string(),
-            },
-        );
-        Database { users }
-    }
-    pub fn get_user(&self, id: &i32) -> Option<&User> {
-        self.users.get(id)
-    }
-}
-
-// To make our Database usable by Juniper, we have to implement a marker trait.
-impl juniper::Context for Database {}
-
-// Queries represent the callable funcitons
-struct Query;
-#[graphql_object(context = Database)]
-impl Query {
-    fn apiVersion() -> String {
-        "1.0".to_string()
-    }
-    #[graphql(arguments(id(description = "id of the user")))]
-    fn user(database: &Database, id: i32) -> Option<&User> {
-        database.get_user(&id)
-    }
-}
-
-type Schema = RootNode<'static, Query, EmptyMutation<Database>, EmptySubscription<Database>>;
-
-fn schema() -> Schema {
-    Schema::new(
-        Query,
-        EmptyMutation::<Database>::new(),
-        EmptySubscription::<Database>::new(),
-    )
-}
-
-async fn graphiql_route() -> Result<HttpResponse, Error> {
-    graphiql_handler("/graphgl", None).await
-}
-async fn playground_route() -> Result<HttpResponse, Error> {
-    playground_handler("/graphgl", None).await
-}
-async fn graphql_route(
-    req: actix_web::HttpRequest,
-    payload: actix_web::web::Payload,
-    schema: web::Data<Schema>,
-) -> Result<HttpResponse, Error> {
-    let context = Database::new();
-    graphql_handler(&schema, &context, req, payload).await
+async fn playground() -> Result<HttpResponse, ()> {
+    Ok(HttpResponse::Ok()
+        .content_type("text/html; charset=utf-8")
+        .body(playground_source(
+            GraphQLPlaygroundConfig::new("/graphql").subscription_endpoint("/graphql"),
+        )))
 }
 
 #[actix_web::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> Result<(), std::io::Error> {
+    dotenv().ok();
     env::set_var("RUST_LOG", "info");
     env_logger::init();
 
+    let pool = db::get_db_pool().await;
+
+    let schema = create_schema(pool);
+
     let server = HttpServer::new(move || {
         App::new()
-            .data(schema())
+            .data(schema.clone())
             .wrap(middleware::Compress::default())
             .wrap(middleware::Logger::default())
             .wrap(
@@ -119,33 +48,12 @@ async fn main() -> std::io::Result<()> {
                     .max_age(3600),
             )
             .service(
-                web::resource("/graphgl")
-                    .route(web::post().to(graphql_route))
-                    .route(web::get().to(graphql_route)),
+                web::resource("/graphql")
+                    .guard(guard::Post())
+                    .to(graphql_endpoint),
             )
-            .service(web::resource("/graphql").route(web::get().to(playground_route)))
-            .service(web::resource("/graphiql").route(web::get().to(graphiql_route)))
+            .service(web::resource("/graphql").guard(guard::Get()).to(playground))
     });
+
     server.bind("localhost:4000").unwrap().run().await
 }
-// now go to http://127.0.0.1:8080/playground or graphiql and execute
-//{  apiVersion,  user(id: 2){id, name}}
-
-// use actix_web::{web, App, HttpRequest, HttpServer, Responder};
-
-// async fn greet(req: HttpRequest) -> impl Responder {
-//     let name = req.match_info().get("name").unwrap_or("World");
-//     format!("Hello {}!", &name)
-// }
-
-// #[actix_web::main]
-// async fn main() -> std::io::Result<()> {
-//     HttpServer::new(|| {
-//         App::new()
-//             .route("/", web::get().to(greet))
-//             .route("/{name}", web::get().to(greet))
-//     })
-//     .bind(("localhost", 4000))?
-//     .run()
-//     .await
-// }
