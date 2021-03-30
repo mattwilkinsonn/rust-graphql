@@ -1,10 +1,10 @@
 pub struct QueryRoot;
 
-use crate::db::get_user_by_id;
+use crate::db::user::get_user_by_id;
 
+use super::super::utils::get_pool_from_ctx;
 use super::user::User;
 use async_graphql::{Context, Error, Object};
-use graphql_demo::get_pool_from_ctx;
 
 #[Object]
 impl QueryRoot {

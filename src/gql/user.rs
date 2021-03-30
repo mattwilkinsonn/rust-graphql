@@ -24,8 +24,8 @@ impl User {
     }
 }
 
-impl From<db::User> for User {
-    fn from(db_user: db::User) -> Self {
+impl From<db::user::User> for User {
+    fn from(db_user: db::user::User) -> Self {
         User {
             id: db_user.id,
             email: db_user.email,

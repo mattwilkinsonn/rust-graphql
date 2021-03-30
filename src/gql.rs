@@ -1,3 +1,4 @@
+pub mod mutation;
 mod query;
 pub mod schema;
-mod user;
+pub mod user;

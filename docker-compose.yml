@@ -11,12 +11,10 @@ services:
       - POSTGRES_PASSWORD=postgres
     ports:
       - "5432:5432"
-  pgadmin:
-    image: dpage/pgadmin4
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=pgadmin4@pgadmin.org
-      - PGADMIN_DEFAULT_PASSWORD=admin
-    volumes:
-      - ./data/pgadmin:/root/.pgadmin
+  redis:
+    image: redis
     ports:
-      - "8000:80"
+      - 6379:6379
+    volumes:
+      - ./data/redis:/data
+      - ./data/redis-dump:/var/lib/redis
